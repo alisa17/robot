@@ -8,9 +8,15 @@
 
 
 <body>
-  <button id="repointArrow" value="0">Turn me around!</button>
-  <button id="stepOne" valuerow="2" valuecolumn="2">Make me step!</button>
-  <canvas id="canvas"></canvas>
+  <div style="position: absolute; z-index: 2;">
+    <button id="repointArrow" value="0">Turn me around!</button>
+    <button id="stepOne" valuerow="2" valuecolumn="2">Make me step!</button>
+
+  </div>
+  <canvas id="layer1" style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
+  <canvas id="layer2" style="position: absolute; left: 0; top: 0; z-index: 1;"></canvas>
+<footer style="position: absolute; z-index: 2; width: 100%; bottom: 0px;">Robot icon made by Vectors Market from www.flaticon.com</footer>
+  <img src="robot.svg" style="display: none;" />
 </body>
 
 </html>
