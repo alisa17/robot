@@ -1,14 +1,15 @@
-function calculateGridUnitLengthBasedOnScreen(width, height) {
+function calculateGridUnitLengthBasedOnScreen(width, height, gridCellsPerSide) {
+  const gridSideToScreenSideRatio = 0.8;
   const shorterSide = Math.min(width, height);
-  const gridSideLength = shorterSide * 0.8;
-  return gridSideLength / 5;
+  const gridSideLength = shorterSide * gridSideToScreenSideRatio;
+  return gridSideLength / gridCellsPerSide;
 }
 
-function makeGrid(availableWidth, availableHeight) {
-  const gridUnitLength = calculateGridUnitLengthBasedOnScreen(availableWidth, availableHeight);
+function makeGrid(availableWidth, availableHeight, gridCellsPerSide) {
+  const gridUnitLength = calculateGridUnitLengthBasedOnScreen(availableWidth, availableHeight, 5);
   const p1x = availableWidth * 0.1;
   const p1y = availableHeight * 0.1;
-  const dummyRow = [...Array(5).keys()];
+  const dummyRow = [...Array(gridCellsPerSide).keys()];
   const startingPoints = dummyRow.map(rowNumber => dummyRow.map(x => [
     p1x + gridUnitLength * x,
     p1y + gridUnitLength * rowNumber
@@ -21,7 +22,7 @@ function makeGrid(availableWidth, availableHeight) {
   return allRows;
 }
 
-const findArrowCoordsBasedOnDirection = (middle, base, height, direction) => coordinateFindingFunctions[direction](middle, base, height, direction);
+const findArrowCoordsBasedOnDirection = (middle, base, height, direction) => coordinateFindingFunctions[direction](middle, base, height);
 
 const coordinateFindingFunctions = {
   up: function(middle, base, height) {
@@ -117,6 +118,30 @@ function drawTriangle(ctx, centre, side, direction) {
   ctx.fill();
 }
 
+function placeRobotImage(context, width, height, cell, imageSide, htmlImage) {
+  context.clearRect(0, 0, width, height);
+  const [topLeftX,
+    topLeftY] = cell.slice(0, 2);
+  context.drawImage(htmlImage, topLeftX, topLeftY, imageSide, imageSide);
+}
+
+function placeArrowOnGrid(context, width, height, rectangleSpecs, i, x, y, side) {
+  context.clearRect(0, 0, width, height);
+  // draw grid
+  rectangleSpecs.forEach(row => {
+    row.forEach(gridUnit => {
+      context.lineWidth = 5;
+      context.strokeRect(...gridUnit);
+    })
+  })
+  // place arrow in the cell
+  const cell = rectangleSpecs[x][y];
+  const cellCoords = cell.slice(0, 2);
+
+  const arrowDirection = directions[i];
+  drawTriangle(context, cellCoords, side, arrowDirection);
+}
+
 window.onload = function() {
   const width = window.innerWidth;
   const height = window.innerHeight;
@@ -125,15 +150,18 @@ window.onload = function() {
   canvas.width = width;
   canvas.height = height;
 
-  const rectangleSpecs = makeGrid(width, height)
-  const gridSideForScreen = rectangleSpecs[0][0][3];
+  const rectangleSpecs = makeGrid(width, height, 5)
+  const cellSideForScreen = rectangleSpecs[0][0][3];
 
   const turnMeAroundButton = document.getElementById('repointArrow');
   turnMeAroundButton.onclick = handleTurn;
   function handleTurn() {
     const arrowCurrentDirectionIndex = turnMeAroundButton.value;
-    turnMeAroundButton.value = wrapAround(arrowCurrentDirectionIndex, 3)
-    placeArrowOnGrid(turnMeAroundButton.value, Number(makeMeStepButton.getAttribute('valuerow')), Number(makeMeStepButton.getAttribute('valuecolumn')), gridSideForScreen);
+    const newArrowValue = wrapAround(arrowCurrentDirectionIndex, 3);
+    turnMeAroundButton.value = newArrowValue;
+    const row = Number(makeMeStepButton.getAttribute('valuerow'));
+    const column = Number(makeMeStepButton.getAttribute('valuecolumn'));
+    placeArrowOnGrid(context, width, height, rectangleSpecs, newArrowValue, row, column, cellSideForScreen);
   }
 
   const makeMeStepButton = document.getElementById('stepOne');
@@ -146,43 +174,24 @@ window.onload = function() {
       newColumn] = calculateNewPositionBasedOnDirection(currentRow, currentColumn, directions[arrowCurrentDirectionIndex]);
     makeMeStepButton.setAttribute('valuerow', newRow);
     makeMeStepButton.setAttribute('valuecolumn', newColumn);
-    placeArrowOnGrid(turnMeAroundButton.value, newRow, newColumn, gridSideForScreen);
-    placeRobotOnGrid(newRow, newColumn, gridSideForScreen, gridSideForScreen);
+    const newCellTopLeftCoord = rectangleSpecs[newRow][newColumn];
+    placeArrowOnGrid(context, width, height, rectangleSpecs, turnMeAroundButton.value, newRow, newColumn, cellSideForScreen);
+    placeRobotImage(contextRobot, width, height, newCellTopLeftCoord, cellSideForScreen, robotPic);
   }
 
+  // set up layer for robot image
   const canvasRobot = document.getElementById('layer1');
   canvasRobot.width = width;
   canvasRobot.height = height;
   const contextRobot = canvasRobot.getContext('2d');
   const robotPic = document.querySelector("img");
 
-  function placeRobotOnGrid(row, column, side1, side2) {
-    contextRobot.clearRect(0, 0, width, height);
-    const cell = rectangleSpecs[row][column];
-    const [topLeftX,
-      topLeftY] = cell.slice(0, 2);
-    contextRobot.drawImage(robotPic, topLeftX, topLeftY, side1, side2);
-  }
-
-  function placeArrowOnGrid(i, x, y, side) {
-    context.clearRect(0, 0, width, height);
-    // draw grid
-    rectangleSpecs.forEach(row => {
-      row.forEach(gridUnit => {
-        context.lineWidth = 5;
-        context.strokeRect(...gridUnit);
-      })
-    })
-    // place arrow in the cell
-    const cell = rectangleSpecs[x][y];
-    const cellCoords = cell.slice(0, 2);
-
-    arrowDirection = directions[i];
-    drawTriangle(context, cellCoords, side, arrowDirection);
-  }
-
-  placeArrowOnGrid(0, Number(makeMeStepButton.getAttribute('valuerow')), Number(makeMeStepButton.getAttribute('valuecolumn')), gridSideForScreen);
-  placeRobotOnGrid(Number(makeMeStepButton.getAttribute('valuerow')), Number(makeMeStepButton.getAttribute('valuecolumn')), gridSideForScreen, gridSideForScreen);
+  // put the robot and the arrow in the initial spot on the grid
+  const firstValueRow = Number(makeMeStepButton.getAttribute('valuerow'));
+  const firstValueColumn = Number(makeMeStepButton.getAttribute('valuecolumn'));
+  const firstCellPositionTopLeftCoords = rectangleSpecs[firstValueRow][firstValueColumn];
+  placeArrowOnGrid(context, width, height, rectangleSpecs, 0, firstValueRow, firstValueColumn, cellSideForScreen);
+  placeRobotImage(contextRobot, width, height, firstCellPositionTopLeftCoords, cellSideForScreen, robotPic);
 }
 
 // utils
@@ -193,3 +202,16 @@ const wrapAround = (myNumber, wrapAroundNumber) => myNumber == wrapAroundNumber
 const wrapAroundNegative = (myNumber, wrapAroundNumber) => myNumber == 0
   ? wrapAroundNumber
   : Number(myNumber) - 1;
+
+// for unit testing
+if ((typeof process !== 'undefined') && (process.release.name === 'node')) {
+  module.exports = {
+    wrapAround,
+    wrapAroundNegative,
+    makeGrid,
+    findArrowCoordsBasedOnDirection,
+    drawTriangle,
+    placeRobotImage,
+    placeArrowOnGrid
+  }
+}
